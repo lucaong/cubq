@@ -368,6 +368,6 @@ defmodule CubQ do
   end
 
   defp select_conditions(queue) do
-    [min_key: {queue}, max_key: {queue, nil}, pipe: [take: 1]]
+    [min_key: {queue, -1.0e32}, max_key: {queue, nil}, pipe: [take: 1]]
   end
 end

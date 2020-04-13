@@ -20,45 +20,55 @@ defmodule CubQTest do
   end
 
   test "queue operations", %{db: db} do
-    {:ok, pid} = CubQ.start_link(db: db, queue: :my_queue)
+    {:ok, q} = CubQ.start_link(db: db, queue: :my_queue)
+    {:ok, q2} = CubQ.start_link(db: db, queue: :my_other_queue)
 
-    assert CubQ.dequeue(pid) == nil
-    assert CubQ.peek_first(pid) == nil
+    assert :ok = CubQ.enqueue(q2, "one")
 
-    assert :ok = CubQ.enqueue(pid, :one)
-    assert :ok = CubQ.enqueue(pid, :two)
-    assert :ok = CubQ.enqueue(pid, :three)
+    assert CubQ.dequeue(q) == nil
+    assert CubQ.peek_first(q) == nil
 
-    assert {:ok, :one} = CubQ.peek_first(pid)
+    assert :ok = CubQ.enqueue(q, :one)
+    assert :ok = CubQ.enqueue(q, :two)
+    assert :ok = CubQ.enqueue(q, :three)
 
-    assert {:ok, :one} = CubQ.dequeue(pid)
-    assert {:ok, :two} = CubQ.dequeue(pid)
-    assert {:ok, :three} = CubQ.peek_first(pid)
-    assert {:ok, :three} = CubQ.dequeue(pid)
+    assert {:ok, :one} = CubQ.peek_first(q)
 
-    assert CubQ.dequeue(pid) == nil
-    assert CubQ.peek_first(pid) == nil
+    assert {:ok, :one} = CubQ.dequeue(q)
+    assert {:ok, :two} = CubQ.dequeue(q)
+    assert {:ok, :three} = CubQ.peek_first(q)
+    assert {:ok, :three} = CubQ.dequeue(q)
+
+    assert CubQ.dequeue(q) == nil
+    assert CubQ.peek_first(q) == nil
+
+    assert {:ok, "one"} = CubQ.peek_first(q2)
   end
 
   test "stack operations", %{db: db} do
-    {:ok, pid} = CubQ.start_link(db: db, queue: :my_queue)
+    {:ok, q} = CubQ.start_link(db: db, queue: :my_queue)
+    {:ok, q2} = CubQ.start_link(db: db, queue: :my_other_queue)
 
-    assert CubQ.pop(pid) == nil
-    assert CubQ.peek_last(pid) == nil
+    assert :ok = CubQ.push(q2, "one")
 
-    assert :ok = CubQ.push(pid, :one)
-    assert :ok = CubQ.push(pid, :two)
-    assert :ok = CubQ.push(pid, :three)
+    assert CubQ.pop(q) == nil
+    assert CubQ.peek_last(q) == nil
 
-    assert {:ok, :three} = CubQ.peek_last(pid)
+    assert :ok = CubQ.push(q, :one)
+    assert :ok = CubQ.push(q, :two)
+    assert :ok = CubQ.push(q, :three)
 
-    assert {:ok, :three} = CubQ.pop(pid)
-    assert {:ok, :two} = CubQ.pop(pid)
-    assert {:ok, :one} = CubQ.peek_last(pid)
-    assert {:ok, :one} = CubQ.pop(pid)
+    assert {:ok, :three} = CubQ.peek_last(q)
 
-    assert CubQ.pop(pid) == nil
-    assert CubQ.peek_last(pid) == nil
+    assert {:ok, :three} = CubQ.pop(q)
+    assert {:ok, :two} = CubQ.pop(q)
+    assert {:ok, :one} = CubQ.peek_last(q)
+    assert {:ok, :one} = CubQ.pop(q)
+
+    assert CubQ.pop(q) == nil
+    assert CubQ.peek_last(q) == nil
+
+    assert {:ok, "one"} = CubQ.peek_last(q2)
   end
 
   test "append and prepend", %{db: db} do
