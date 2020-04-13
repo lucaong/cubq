@@ -12,7 +12,9 @@ defmodule CubQ.MixProject do
       source_url: "https://github.com/lucaong/cubq",
       docs: [
         main: "CubQ"
-      ]
+      ],
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [coveralls: :test, "coveralls.detail": :test, "coveralls.post": :test, "coveralls.html": :test, "coveralls.travis": :test]
     ]
   end
 
@@ -25,7 +27,9 @@ defmodule CubQ.MixProject do
   defp deps do
     [
       {:cubdb, "~> 0.17 or ~> 1.0"},
-      {:dialyxir, "~> 1.0.0", only: [:dev], runtime: false}
+      {:dialyxir, "~> 1.0.0", only: [:dev], runtime: false},
+      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
+      {:excoveralls, "~> 0.12", only: :test}
     ]
   end
 
