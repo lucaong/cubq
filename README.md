@@ -1,3 +1,5 @@
+[![Hex Version](https://img.shields.io/hexpm/v/cubq.svg)](https://hex.pm/packages/cubq) [![docs](https://img.shields.io/badge/docs-hexpm-blue.svg)](https://hexdocs.pm/cubq/)
+
 # CubQ
 
 An embedded queue and stack abstraction in Elixir on top of
