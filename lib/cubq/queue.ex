@@ -52,4 +52,23 @@ defmodule CubQ.Queue do
         {:error, error}
     end
   end
+
+  def delete_all(db, {queue, conditions}, batch_size \\ 100) do
+    pipe = Keyword.get(conditions, :pipe, []) |> Keyword.put(:take, batch_size)
+    batch_conditions = Keyword.put(conditions, :pipe, pipe)
+
+    case CubDB.select(db, batch_conditions) do
+      {:ok, []} ->
+        :ok
+
+      {:ok, elements} when is_list(elements) ->
+        keys = Enum.map(elements, fn {key, _value} -> key end)
+
+        with :ok <- CubDB.delete_multi(db, keys),
+             do: delete_all(db, {queue, conditions}, batch_size)
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
 end

@@ -324,6 +324,18 @@ defmodule CubQ do
     GenServer.call(pid, :peek_last)
   end
 
+  @spec delete_all(GenServer.server(), pos_integer) :: :ok | {:error, term}
+
+  @doc """
+  Deletes all elements from the queue.
+
+  The elements are deleted in batches, and the size of the batch can be
+  specified as the optional second argument.
+  """
+  def delete_all(pid, batch_size \\ 100) do
+    GenServer.call(pid, {:delete_all, batch_size})
+  end
+
   # GenServer callbacks
 
   @impl true
@@ -364,6 +376,11 @@ defmodule CubQ do
 
   def handle_call({:prepend, element}, _from, state = %State{db: db, conditions: conditions}) do
     reply = Queue.prepend(db, conditions, element)
+    {:reply, reply, state}
+  end
+
+  def handle_call({:delete_all, batch_size}, _from, state = %State{db: db, conditions: conditions}) do
+    reply = Queue.delete_all(db, conditions, batch_size)
     {:reply, reply, state}
   end
 

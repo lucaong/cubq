@@ -72,20 +72,43 @@ defmodule CubQTest do
   end
 
   test "append and prepend", %{db: db} do
-    {:ok, pid} = CubQ.start_link(db: db, queue: :my_queue)
+    {:ok, q} = CubQ.start_link(db: db, queue: :my_queue)
+    {:ok, q2} = CubQ.start_link(db: db, queue: :my_other_queue)
 
-    assert :ok = CubQ.append(pid, :one)
-    assert :ok = CubQ.prepend(pid, :zero)
-    assert :ok = CubQ.append(pid, :two)
+    assert :ok = CubQ.enqueue(q2, "one")
 
-    assert {:ok, :zero} = CubQ.peek_first(pid)
-    assert {:ok, :two} = CubQ.peek_last(pid)
+    assert :ok = CubQ.append(q, :one)
+    assert :ok = CubQ.prepend(q, :zero)
+    assert :ok = CubQ.append(q, :two)
 
-    assert {:ok, :zero} = CubQ.dequeue(pid)
-    assert {:ok, :one} = CubQ.dequeue(pid)
-    assert {:ok, :two} = CubQ.dequeue(pid)
+    assert {:ok, :zero} = CubQ.peek_first(q)
+    assert {:ok, :two} = CubQ.peek_last(q)
 
-    assert CubQ.dequeue(pid) == nil
-    assert CubQ.peek_first(pid) == nil
+    assert {:ok, :zero} = CubQ.dequeue(q)
+    assert {:ok, :one} = CubQ.dequeue(q)
+    assert {:ok, :two} = CubQ.dequeue(q)
+
+    assert CubQ.dequeue(q) == nil
+    assert CubQ.peek_first(q) == nil
+
+    assert {:ok, "one"} = CubQ.peek_first(q2)
+  end
+
+  test "delete_all/1 deletes all elements in the queue leaving other entries unchanged", %{db: db} do
+    {:ok, q} = CubQ.start_link(db: db, queue: :my_queue)
+    {:ok, q2} = CubQ.start_link(db: db, queue: :my_other_queue)
+
+    assert :ok = CubQ.enqueue(q2, "one")
+
+    assert :ok = CubQ.enqueue(q, :one)
+    assert :ok = CubQ.enqueue(q, :two)
+    assert :ok = CubQ.enqueue(q, :three)
+
+    assert :ok = CubQ.delete_all(q, 2)
+    assert CubQ.dequeue(q) == nil
+
+    assert :ok = CubQ.delete_all(q)
+
+    assert {:ok, "one"} = CubQ.peek_first(q2)
   end
 end
