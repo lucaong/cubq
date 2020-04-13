@@ -98,7 +98,7 @@ The package can be installed by adding `cubq` to your list of dependencies in
 ```elixir
 def deps do
   [
-    {:cubq, "~> 0.1.0"}
+    {:cubq, "~> 0.2.0"}
   ]
 end
 ```
