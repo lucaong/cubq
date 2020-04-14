@@ -1,7 +1,6 @@
 defmodule CubQ do
   use GenServer
   alias CubQ.Queue
-  alias CubQ.Stack
 
   @moduledoc """
   `CubQ` is a queue abstraction on top of `CubDB`. It implements persistent
@@ -94,11 +93,11 @@ defmodule CubQ do
   defmodule State do
     @type t :: %CubQ.State{
             db: GenServer.server(),
-            conditions: {term, Keyword.t()}
+            queue: term
           }
 
-    @enforce_keys [:db, :conditions]
-    defstruct [:db, :conditions]
+    @enforce_keys [:db, :queue]
+    defstruct [:db, :queue]
   end
 
   @gen_server_options [:name, :timeout, :debug, :spawn_opt, :hibernate_after]
@@ -343,48 +342,43 @@ defmodule CubQ do
   def init(options) do
     db = Keyword.fetch!(options, :db)
     queue = Keyword.fetch!(options, :queue)
-    conditions = {queue, select_conditions(queue)}
-    {:ok, %State{db: db, conditions: conditions}}
+    {:ok, %State{db: db, queue: queue}}
   end
 
   @impl true
 
-  def handle_call({:enqueue, element}, _from, state = %State{db: db, conditions: conditions}) do
-    reply = Queue.enqueue(db, conditions, element)
+  def handle_call({:enqueue, element}, _from, state = %State{db: db, queue: queue}) do
+    reply = Queue.enqueue(db, queue, element)
     {:reply, reply, state}
   end
 
-  def handle_call(:dequeue, _from, state = %State{db: db, conditions: conditions}) do
-    reply = Queue.dequeue(db, conditions)
+  def handle_call(:dequeue, _from, state = %State{db: db, queue: queue}) do
+    reply = Queue.dequeue(db, queue)
     {:reply, reply, state}
   end
 
-  def handle_call(:peek_first, _from, state = %State{db: db, conditions: conditions}) do
-    reply = Queue.peek_first(db, conditions)
+  def handle_call(:peek_first, _from, state = %State{db: db, queue: queue}) do
+    reply = Queue.peek_first(db, queue)
     {:reply, reply, state}
   end
 
-  def handle_call(:pop, _from, state = %State{db: db, conditions: conditions}) do
-    reply = Stack.pop(db, conditions)
+  def handle_call(:pop, _from, state = %State{db: db, queue: queue}) do
+    reply = Queue.pop(db, queue)
     {:reply, reply, state}
   end
 
-  def handle_call(:peek_last, _from, state = %State{db: db, conditions: conditions}) do
-    reply = Stack.peek_last(db, conditions)
+  def handle_call(:peek_last, _from, state = %State{db: db, queue: queue}) do
+    reply = Queue.peek_last(db, queue)
     {:reply, reply, state}
   end
 
-  def handle_call({:prepend, element}, _from, state = %State{db: db, conditions: conditions}) do
-    reply = Queue.prepend(db, conditions, element)
+  def handle_call({:prepend, element}, _from, state = %State{db: db, queue: queue}) do
+    reply = Queue.prepend(db, queue, element)
     {:reply, reply, state}
   end
 
-  def handle_call({:delete_all, batch_size}, _from, state = %State{db: db, conditions: conditions}) do
-    reply = Queue.delete_all(db, conditions, batch_size)
+  def handle_call({:delete_all, batch_size}, _from, state = %State{db: db, queue: queue}) do
+    reply = Queue.delete_all(db, queue, batch_size)
     {:reply, reply, state}
-  end
-
-  defp select_conditions(queue) do
-    [min_key: {queue, -1.0e32}, max_key: {queue, nil}, pipe: [take: 1]]
   end
 end
