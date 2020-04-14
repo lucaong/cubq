@@ -1,5 +1,5 @@
 defmodule CubQTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   doctest CubQ
 
   setup do
@@ -94,7 +94,7 @@ defmodule CubQTest do
     assert {:ok, "one"} = CubQ.peek_first(q2)
   end
 
-  test "delete_all/1 deletes all elements in the queue leaving other entries unchanged", %{db: db} do
+  test "delete_all/1 deletes all items in the queue leaving other entries unchanged", %{db: db} do
     {:ok, q} = CubQ.start_link(db: db, queue: :my_queue)
     {:ok, q2} = CubQ.start_link(db: db, queue: :my_other_queue)
 
@@ -110,5 +110,75 @@ defmodule CubQTest do
     assert :ok = CubQ.delete_all(q)
 
     assert {:ok, "one"} = CubQ.peek_first(q2)
+  end
+
+  test "queue operations with explicit ack/nack", %{db: db} do
+    {:ok, q} = CubQ.start_link(db: db, queue: :my_queue)
+    {:ok, q2} = CubQ.start_link(db: db, queue: :my_other_queue)
+
+    assert :ok = CubQ.enqueue(q2, "one")
+    assert :ok = CubQ.enqueue(q2, "two")
+    assert _ = CubQ.dequeue_ack(q2, 10_000)
+
+    assert :ok = CubQ.enqueue(q, :one)
+    assert :ok = CubQ.enqueue(q, :two)
+    assert :ok = CubQ.enqueue(q, :three)
+
+    assert {:ok, :one} = CubQ.peek_first(q)
+
+    assert {:ok, :one, ack_id} = CubQ.dequeue_ack(q)
+    assert {:ok, :two} = CubQ.peek_first(q)
+
+    assert :ok = CubQ.nack(q, ack_id)
+    assert {:ok, :one} = CubQ.peek_first(q)
+
+    assert {:ok, :one, ack_id} = CubQ.dequeue_ack(q)
+    assert {:ok, :two} = CubQ.peek_first(q)
+
+    assert :ok = CubQ.ack(q, ack_id)
+    assert {:ok, :two} = CubQ.peek_first(q)
+
+    assert {:ok, :two, _ack_id} = CubQ.dequeue_ack(q, 150)
+    assert {:ok, :three, _ack_id} = CubQ.dequeue_ack(q, 100)
+
+    Process.sleep(1000)
+    assert {:ok, :two} = CubQ.peek_first(q)
+
+    assert {:ok, "two"} = CubQ.peek_first(q2)
+  end
+
+  test "stack operations with explicit ack/nack", %{db: db} do
+    {:ok, q} = CubQ.start_link(db: db, queue: :my_queue)
+    {:ok, q2} = CubQ.start_link(db: db, queue: :my_other_queue)
+
+    assert :ok = CubQ.push(q2, "one")
+    assert :ok = CubQ.push(q2, "two")
+    assert _ = CubQ.pop_ack(q2, 10_000)
+
+    assert :ok = CubQ.push(q, :zero)
+    assert :ok = CubQ.push(q, :one)
+    assert :ok = CubQ.push(q, :two)
+
+    assert {:ok, :two} = CubQ.peek_last(q)
+
+    assert {:ok, :two, ack_id} = CubQ.pop_ack(q)
+    assert {:ok, :one} = CubQ.peek_last(q)
+
+    assert :ok = CubQ.nack(q, ack_id)
+    assert {:ok, :two} = CubQ.peek_last(q)
+
+    assert {:ok, :two, ack_id} = CubQ.pop_ack(q)
+    assert {:ok, :one} = CubQ.peek_last(q)
+
+    assert :ok = CubQ.ack(q, ack_id)
+    assert {:ok, :one} = CubQ.peek_last(q)
+
+    assert {:ok, :one, _ack_id} = CubQ.pop_ack(q, 150)
+    assert {:ok, :zero, _ack_id} = CubQ.pop_ack(q, 100)
+
+    Process.sleep(1000)
+    assert {:ok, :one} = CubQ.peek_last(q)
+
+    assert {:ok, "one"} = CubQ.peek_last(q2)
   end
 end
