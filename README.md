@@ -16,7 +16,7 @@ It implements persistent local (double-ended) queue and stack semantics.
 {:ok, pid} = CubQ.start_link(db: db, queue: :my_queue_id)
 ```
 
-### Queue
+### Queues
 
 Queue semantics are implemented by the `enqueue` and `dequeue` functions:
 
@@ -33,13 +33,13 @@ CubQ.dequeue(pid)
 CubQ.dequeue(pid)
 #=> {:ok, :two}
 
-# When there are no more elements in the queue, `dequeue` returns `nil`:
+# When there are no more items in the queue, `dequeue` returns `nil`:
 
 CubQ.dequeue(pid)
 #=> nil
 ```
 
-Note that elements can be any Elixir (or Erlang) term:
+Note that items can be any Elixir (or Erlang) term:
 
 ```elixir
 CubQ.enqueue(pid, %SomeStruct{foo: "bar"})
@@ -49,7 +49,7 @@ CubQ.dequeue(pid)
 #=> {:ok, %SomeStruct{foo: "bar"}}
 ```
 
-The queue is actually double-ended, so elements can be prepended too:
+The queue is actually double-ended, so items can be prepended too:
 
 ```elixir
 CubQ.enqueue(pid, :one)
@@ -79,7 +79,7 @@ CubQ.pop(pid)
 CubQ.pop(pid)
 #=> {:ok, :one}
 
-# When there are no more elements in the stack, `pop` returns `nil`:
+# When there are no more items in the stack, `pop` returns `nil`:
 
 CubQ.pop(pid)
 #=> nil
@@ -89,6 +89,42 @@ CubQ.pop(pid)
 
 As the underlying data structure used for stacks and queues is the same, queue
 and stack semantics can be mixed on the same queue.
+
+### At-least-once semantics
+
+When multiple consumers are taking items from a queue, and "at least once"
+semantics are required, the `dequeue_ack/2` and `pop_ack/2` functions allow to
+explicitly acknowledge the successful consumption of an item, or else put it
+back in the queue after a given timeout elapses:
+
+```elixir
+CubQ.enqueue(pid, :one)
+#=> :ok
+
+CubQ.enqueue(pid, :two)
+#=> :ok
+
+{:ok, item, ack_id} = CubQ.dequeue_ack(pid, 3000)
+#=> {:ok, :one, ack_id}
+
+# More items can be now taken from the queue
+CubQ.dequeue(pid)
+#=> {:ok, :two}
+
+# If 3 seconds elapse without `ack` being called, or `nack` is called,
+# the item `:one` would be put back to the queue, so it can be dequeued
+# again:
+CubQ.nack(pid, ack_id)
+#=> :ok
+
+{:ok, item, ack_id} = CubQ.dequeue_ack(pid, 3000)
+#=> {:ok, :one, ack_id}
+
+# When successful consumption is confirmed by calling `ack`, the item
+# is finally discarded and won't be put back in the queue anymore:
+CubQ.ack(pid, ack_id)
+#=> :ok
+```
 
 ## Installation
 
