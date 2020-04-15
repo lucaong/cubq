@@ -88,6 +88,32 @@ defmodule CubQ do
 
   As the underlying data structure used for stacks and queues is the same, queue
   and stack semantics can be mixed on the same queue.
+
+  ### At-least-once semantics
+
+  When multiple consumers are taking items from a queue, and "at least once"
+  semantics are required, the `dequeue_ack/2` and `pop_ack/2` functions allow to
+  explicitly acknowledge the successful consumption of an item, or else put it
+  back in the queue after a given timeout elapses:
+
+  ```
+  CubQ.enqueue(pid, :one)
+  #=> :ok
+
+  CubQ.enqueue(pid, :two)
+  #=> :ok
+
+  {:ok, item, ack_id} = CubQ.dequeue_ack(pid, 3000)
+  #=> {:ok, :one, ack_id}
+
+  # If 3 seconds elapse without `ack` being called, or if `nack` is called, the
+  # item `:one` is put back to the queue, so it can be consumed again.
+
+  # When successful consumption is confirmed by calling `ack`, the item
+  # is finally discarded and won't be put back in the queue anymore:
+  CubQ.ack(pid, ack_id)
+  #=> :ok
+  ```
   """
 
   defmodule State do
@@ -208,7 +234,7 @@ defmodule CubQ do
   discarded.
 
   The problem is the following: if a consumer took an item with `dequeue/1` and
-  then crashes before processing it, the item would be lost. With
+  then crashed before processing it, the item would be lost. With
   `dequeue_ack/2` instead, the item is not immediately removed, but instead
   atomically transfered to a staging storage. If the consumer successfully
   processes the item, it can call `ack/2` (acknowledgement) to confirm the

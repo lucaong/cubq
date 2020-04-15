@@ -93,7 +93,7 @@ and stack semantics can be mixed on the same queue.
 ### At-least-once semantics
 
 When multiple consumers are taking items from a queue, and "at least once"
-semantics are required, the `dequeue_ack/2` and `pop_ack/2` functions allow to
+semantics are required, the `dequeue_ack` and `pop_ack` functions allow to
 explicitly acknowledge the successful consumption of an item, or else put it
 back in the queue after a given timeout elapses:
 
@@ -107,18 +107,8 @@ CubQ.enqueue(pid, :two)
 {:ok, item, ack_id} = CubQ.dequeue_ack(pid, 3000)
 #=> {:ok, :one, ack_id}
 
-# More items can be now taken from the queue
-CubQ.dequeue(pid)
-#=> {:ok, :two}
-
-# If 3 seconds elapse without `ack` being called, or `nack` is called,
-# the item `:one` would be put back to the queue, so it can be dequeued
-# again:
-CubQ.nack(pid, ack_id)
-#=> :ok
-
-{:ok, item, ack_id} = CubQ.dequeue_ack(pid, 3000)
-#=> {:ok, :one, ack_id}
+# If 3 seconds elapse without `ack` being called, or if `nack` is called, the
+# item `:one` is put back to the queue, so it can be consumed again.
 
 # When successful consumption is confirmed by calling `ack`, the item
 # is finally discarded and won't be put back in the queue anymore:
