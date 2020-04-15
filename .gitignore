@@ -23,3 +23,4 @@ erl_crash.dump
 cubq-*.tar
 
 .elixir_ls/
+tmp/
