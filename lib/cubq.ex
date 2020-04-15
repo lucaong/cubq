@@ -272,16 +272,12 @@ defmodule CubQ do
   {:ok, item, ack_id} = CubQ.dequeue_ack(pid, 3000)
   #=> {:ok, :one, ack_id}
 
-  # More items can be now taken from the queue
-  CubQ.dequeue(pid)
-  #=> {:ok, :two}
-
-  # If 3 seconds elapse without `ack` being called, or `nack` is called,
-  # the item `:one` would be put back to the queue, so it can be dequeued
-  # again:
+  # If 3 seconds elapse without `ack` being called, or `nack` is called, the
+  # item `:one` is put back to the queue, so it can be dequeued again:
   CubQ.nack(pid, ack_id)
   #=> :ok
 
+  # The item `:one` is back in the queue, as `nack/2` was called:
   {:ok, item, ack_id} = CubQ.dequeue_ack(pid, 3000)
   #=> {:ok, :one, ack_id}
 
